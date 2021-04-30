@@ -54,11 +54,19 @@ build_package() {
 		(
 		mkdir  -p "$BUILD_DIR/$1"
 		cd "$BUILD_DIR/$1"
-		
 		echo "configure $3"
 		$2/configure $3
-		make -j $(nproc)
-		make install
+                if [ -z ${4+x} ]; then
+                        make -j $(nproc)
+                else
+                        make -j $(nproc) $4
+                fi
+                if [ -z ${5+x} ]; then
+                        make -j $(nproc) install
+                else
+                        make -j $(nproc) $5
+                fi
+		#make install
 		) || exit 1
 		touch "$BUILD_DIR/$1.stamp" 
 	fi
@@ -77,20 +85,28 @@ build_prereq() {
 }
 
 build_gcc() {
-	TARGET_OPTIONS="$HOST_OPTIONS --target=x86_64-w64-mingw32 --disable-nls --with-sysroot=$PREFIX"
+	TARGET_OPTIONS="$HOST_OPTIONS --target=x86_64-w64-mingw32 --disable-nls --with-sysroot=$SYSROOT"
 	BINUTILS_OPTIONS="$TARGET_OPTIONS --enable-targets=x86_64-w64-mingw32,i686-w64-mingw32"
 	build_package binutils "$SRC_DIR/binutils-${BINUTILS_VERSION}" "$BINUTILS_OPTIONS"
+	build_package mingw_headers "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-headers" "-with-sysroot=$SYSROOT --prefix=$SYSROOT/mingw --host=x86_64-w64-mingw32"
 	GCC_OPTIONS="$TARGET_OPTIONS --enable-targets=all --enable-languages=c,c++"
+	build_package gcc "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS" "all-gcc" "install-gcc"
+	build_package mingw_crt "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-crt" "-with-sysroot=$SYSROOT --prefix=$SYSROOT/mingw --enable-lib32 --enable-lib64 --host=x86_64-w64-mingw32"
 	build_package gcc "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS"
 }
 
+SRC_DIR="$(pwd)/sources"
+mkdir -p "$SRC_DIR"
 mkdir -p workdir
 cd workdir
-SRC_DIR="$(pwd)"
 BUILD_DIR="$(pwd)/build"
 mkdir -p "$BUILD_DIR"
 PREFIX="$(pwd)/prefix"
+PATH="$PREFIX/bin:$PATH"
 mkdir -p "$PREFIX"
+#SYSROOT="$(pwd)/sysroot"
+SYSROOT="$PREFIX/sysroot"
+mkdir -p "$SYSROOT"
 BASE_OPTIONS="--prefix=$PREFIX --disable-shared"
 HOST_OPTIONS="$BASE_OPTIONS"
 
