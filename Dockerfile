@@ -32,6 +32,8 @@ ARG GMP_VERSION=6.2.1
 ARG MPC_VERSION=1.2.1
 ARG ISL_VERSION=0.18
 ARG ZSTD_VERSION=1.4.9
+ARG BINUTILS_VERSION=2.36
+ARG GCC_VERSION=8.4.0
 
 # MPFR
 
@@ -62,6 +64,18 @@ RUN set -ex \
 RUN set -ex \
 	&& wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz \
 	&& tar xvzf zstd-${ZSTD_VERSION}.tar.gz
+
+# Binutils
+
+RUN set -ex \
+	&& wget https://mirror.easyname.at/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz \
+	&& tar xvJf binutils-${BINUTILS_VERSION}.tar.xz
+
+# GCC
+
+RUN set -ex \
+	&& wget http://mirror.koddos.net/gcc/releases/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz \
+	&& tar xvJf gcc-${GCC_VERSION}.tar.xz 
 
 RUN set -ex \
 	&& ls -al
