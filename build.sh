@@ -87,13 +87,13 @@ build_prereq() {
 
 build_gcc() {
 	TARGET_OPTIONS="$HOST_OPTIONS --target=x86_64-w64-mingw32 --disable-nls --with-sysroot=$SYSROOT"
-	TARGET_OPTIONS="$TARGET_OPTIONS --disable-multilib"
-	#BINUTILS_OPTIONS="$TARGET_OPTIONS --enable-targets=x86_64-w64-mingw32,i686-w64-mingw32"
-	BINUTILS_OPTIONS="$TARGET_OPTIONS"
+	#TARGET_OPTIONS="$TARGET_OPTIONS --disable-multilib"
+	BINUTILS_OPTIONS="$TARGET_OPTIONS --enable-targets=x86_64-w64-mingw32,i686-w64-mingw32"
+	#BINUTILS_OPTIONS="$TARGET_OPTIONS"
 	build_package binutils "$SRC_DIR/binutils-${BINUTILS_VERSION}" "$BINUTILS_OPTIONS"
 	build_package mingw_headers "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-headers" "-with-sysroot=$SYSROOT --prefix=$PREFIX/mingw --host=x86_64-w64-mingw32"
-	#GCC_OPTIONS="$TARGET_OPTIONS --enable-targets=all --enable-languages=c,c++ --with-native-system-header-dir=$PREFIX/mingw"
-	GCC_OPTIONS="$TARGET_OPTIONS --enable-languages=c,c++"
+	GCC_OPTIONS="$TARGET_OPTIONS --enable-targets=all --enable-languages=c,c++"
+	#GCC_OPTIONS="$TARGET_OPTIONS --enable-languages=c,c++"
 	build_package gcc_core "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS" "all-gcc" "install-gcc"
 	build_package mingw_crt "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-crt" "-with-sysroot=$SYSROOT --prefix=$PREFIX/mingw --enable-lib32 --enable-lib64 --host=x86_64-w64-mingw32"
 	build_package gcc_lib "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS"
