@@ -29,7 +29,5 @@ RUN set -ex \
 COPY build.sh .
 
 RUN set -ex \
-	&& ./build.sh download
+	&& ./build.sh
 
-RUN set -ex \
-	&& ./build.sh prereq
