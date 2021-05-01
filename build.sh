@@ -1,6 +1,7 @@
 #!/bin/sh
 set -ex
 
+CFG_BUILD="$(gcc -dumpmachine)"
 CFG_HOST="x86_64-w64-mingw32"
 CFG_TARGET="x86_64-w64-mingw32"
 
@@ -12,11 +13,15 @@ ISL_VERSION=0.18
 ZSTD_VERSION=1.4.9
 BINUTILS_VERSION=2.36
 GCC_VERSION=8.4.0
+#GCC_VERSION=10.3.0
 MINGW64_VERSION=7.0.0
+GDB_VERSION=10.2
 
 # Default folders
 SRC_DIR="$(pwd)/sources"
 WRK_DIR="$(pwd)/workdir"
+JOBS="$(nproc)"
+#JOBS=1
 
 download() {
 	(
@@ -53,26 +58,48 @@ download() {
 			wget https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v${MINGW64_VERSION}.tar.bz2
 			tar xvjf mingw-w64-v${MINGW64_VERSION}.tar.bz2
 		fi
+		if [ ! -e "gdb-${GDB_VERSION}" ]; then
+			wget https://ftp.gnu.org/gnu/gdb/gdb-${GDB_VERSION}.tar.xz
+			tar xvJf gdb-${GDB_VERSION}.tar.xz
+		fi
 	)
 }
 
 build_package() {
 	if [ ! -e "$BUILD_DIR/$1.stamp" ]; then
 		(
-			mkdir -p "$BUILD_DIR/$1"
-			cd "$BUILD_DIR/$1"
-			echo "configure $3"
-			# shellcheck disable=SC2086
-			"$2"/configure $3
+			mkdir -p "$BUILD_DIR/${1%%.*}"
+			cd "$BUILD_DIR/${1%%.*}"
+			if [ ! -e .configured ]; then
+				echo "configure $3"
+				# shellcheck disable=SC2086
+				"$2"/configure $3 || {
+					echo "Configure failed for $2"
+					exit 1
+				}
+				touch .configured
+			fi
 			if [ -z ${4+x} ]; then
-				make -j "$(nproc)"
+				make -j "$JOBS" || {
+					echo "Configure failed for $2"
+					exit 1
+				}
 			else
-				make -j "$(nproc)" "$4"
+				make -j "$JOBS" "$4" || {
+					echo "Configure failed for $2"
+					exit 1
+				}
 			fi
 			if [ -z ${5+x} ]; then
-				make install
+				make install || {
+					echo "Configure failed for $2"
+					exit 1
+				}
 			else
-				make "$5"
+				make "$5" || {
+					echo "Configure failed for $2"
+					exit 1
+				}
 			fi
 		) || exit 1
 		touch "$BUILD_DIR/$1.stamp"
@@ -108,13 +135,20 @@ build_toolchain() {
 		;;
 	esac
 	GCC_OPTIONS="$TARGET_OPTIONS --enable-targets=all --enable-languages=c,c++"
-	build_package gcc_core "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS" "all-gcc" "install-gcc"
+	#if [ "$1" = "$2" ]; then
+	#	GCC_OPTIONS="$GCC_OPTIONS --enable-threads=posix"
+	#fi
+	build_package gcc.step1 "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS" "all-gcc" "install-gcc"
 	case $CFG_TARGET in
 	*"mingw32"*)
-		build_package mingw_crt "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-crt" "-with-sysroot=$SYSROOT --prefix=$SYSROOT/mingw --enable-lib32 --enable-lib64 --host=$2"
+		build_package mingw_crt "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}" "$HOST_OPTIONS -with-sysroot=$SYSROOT --prefix=$SYSROOT/mingw --enable-lib32 --enable-lib64 --host=$2 --with-libraries=winpthreads"
 		;;
 	esac
-	build_package gcc_lib "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS"
+	build_package gcc.step2 "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS"
+	if [ "$1" = "$2" ]; then
+		echo "GDB"
+		#		build_package gdb "$SRC_DIR/gdb-${GDB_VERSION}" "$BASE_OPTIONS -prefix=$SYSROOT"
+	fi
 }
 
 # Create work directory
@@ -124,9 +158,6 @@ cd "$WRK_DIR"
 # Download and unpack packages
 mkdir -p "$SRC_DIR"
 download
-
-# Find current build
-CFG_BUILD="$("$SRC_DIR"/gcc-${GCC_VERSION}/config.guess)"
 
 # Build toolchain for build->target
 build_toolchain "$CFG_BUILD" "$CFG_TARGET"

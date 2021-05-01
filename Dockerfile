@@ -20,6 +20,7 @@ RUN set -ex \
 		git \
 		gzip \
 		lzip \
+		texinfo \
 		wget \
 		xz-utils \
 	&& apt-get clean \
