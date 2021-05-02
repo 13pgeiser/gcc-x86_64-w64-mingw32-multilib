@@ -16,6 +16,7 @@ RUN set -ex \
 		bzip2 \
 		ca-certificates \
 		curl \
+		figlet \
 		flex \
 		git \
 		gzip \

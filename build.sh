@@ -22,6 +22,8 @@ SRC_DIR="$(pwd)/sources"
 WRK_DIR="$(pwd)/workdir"
 JOBS="$(nproc)"
 #JOBS=1
+LD_LIBRARY_PATH=""
+HOST_SYSROOT=""
 
 download() {
 	(
@@ -80,16 +82,19 @@ build_package() {
 				touch .configured
 			fi
 			if [ -z ${4+x} ]; then
-				make -j "$JOBS" || {
+				# shellcheck disable=SC2086
+				make -j "$JOBS" $MAKE_FLAGS || {
 					echo "Configure failed for $2"
 					exit 1
 				}
 			else
-				make -j "$JOBS" "$4" || {
+				# shellcheck disable=SC2086
+				make -j "$JOBS" "$4" $MAKE_FLAGS || {
 					echo "Configure failed for $2"
 					exit 1
 				}
 			fi
+			MAKE_FLAGS=""
 			if [ -z ${5+x} ]; then
 				make install || {
 					echo "Configure failed for $2"
@@ -107,48 +112,61 @@ build_package() {
 }
 
 build_toolchain() {
+	shared=false
+	figlet "$1" -w 140
+	figlet " -> "
+	figlet "$2" -w 140
 	BUILD_DIR="$WRK_DIR/$1_build"
-	CROSS_DIR="$WRK_DIR/$1_cross"
-	SYSROOT="$WRK_DIR/$1-${GCC_VERSION}"
 	mkdir -p "$BUILD_DIR"
-	mkdir -p "$CROSS_DIR"
+	SYSROOT="$WRK_DIR/$1-${GCC_VERSION}"
 	mkdir -p "$SYSROOT"
-	PATH="$SYSROOT/bin:$PATH"
-	BASE_OPTIONS="--disable-shared --host=$1"
-	HOST_OPTIONS="$BASE_OPTIONS"
-	build_package gmp "$SRC_DIR/gmp-${GMP_VERSION}" "$HOST_OPTIONS --prefix=$CROSS_DIR"
-	HOST_OPTIONS="$HOST_OPTIONS --with-gmp=$CROSS_DIR"
-	build_package mpfr "$SRC_DIR/mpfr-${MPFR_VERSION}" "$HOST_OPTIONS --prefix=$CROSS_DIR"
-	HOST_OPTIONS="$HOST_OPTIONS --with-mpfr=$CROSS_DIR"
-	build_package mpc "$SRC_DIR/mpc-${MPC_VERSION}" "$HOST_OPTIONS --prefix=$CROSS_DIR"
-	HOST_OPTIONS="$HOST_OPTIONS --with-mpc=$CROSS_DIR"
-	build_package isl "$SRC_DIR/isl-${ISL_VERSION}" "$BASE_OPTIONS --prefix=$CROSS_DIR --with-gmp-prefix=$CROSS_DIR"
-	HOST_OPTIONS="$HOST_OPTIONS --with-isl=$CROSS_DIR"
-	TARGET_OPTIONS="$HOST_OPTIONS --target=$2 --disable-nls --with-sysroot=$SYSROOT --prefix=$SYSROOT"
-	if [ "$2" = "x86_64-w64-mingw32" ]; then
-		BINUTILS_OPTIONS="$TARGET_OPTIONS --enable-targets=x86_64-w64-mingw32,i686-w64-mingw32"
+	export PATH="$SYSROOT/bin:$PATH"
+	export LD_LIBRARY_PATH="$SYSROOT/lib:$LD_LIBRARY_PATH"
+	echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+	BASE_OPTIONS="--prefix=$SYSROOT --enable-static --disable-shared --host=$1"
+	LIBS_OPTIONS=""
+	MAKE_FLAGS=""
+	if [ "$shared" = true ]; then
+		BASE_OPTIONS="--prefix=$SYSROOT --enable-shared  --host=$1"
+		LIBS_OPTIONS="--disable-static"
 	fi
-	build_package binutils "$SRC_DIR/binutils-${BINUTILS_VERSION}" "$BINUTILS_OPTIONS"
-	case $CFG_TARGET in
+	if [ "$1" = "x86_64-w64-mingw32" ]; then
+		export LDFLAGS="$LDFLAGS -L$HOST_SYSROOT/lib/gcc/$1/lib"
+	fi
+	HOST_OPTIONS="$BASE_OPTIONS"
+	build_package gmp "$SRC_DIR/gmp-${GMP_VERSION}" "$HOST_OPTIONS $LIBS_OPTIONS"
+	HOST_OPTIONS="$HOST_OPTIONS --with-gmp=$SYSROOT"
+	build_package mpfr "$SRC_DIR/mpfr-${MPFR_VERSION}" "$HOST_OPTIONS $LIBS_OPTIONS"
+	HOST_OPTIONS="$HOST_OPTIONS --with-mpfr=$SYSROOT"
+	build_package mpc "$SRC_DIR/mpc-${MPC_VERSION}" "$HOST_OPTIONS $LIBS_OPTIONS"
+	HOST_OPTIONS="$HOST_OPTIONS --with-mpc=$SYSROOT"
+	if [ "$1" = "x86_64-w64-mingw32" ]; then
+		if [ "$shared" = true ]; then
+			MAKE_FLAGS="LDFLAGS=-no-undefined"
+		fi
+	fi
+	build_package isl "$SRC_DIR/isl-${ISL_VERSION}" "$BASE_OPTIONS $LIBS_OPTIONS --with-sysroot=$SYSROOT --with-gmp-prefix=$SYSROOT"
+	HOST_OPTIONS="$HOST_OPTIONS --with-isl=$SYSROOT"
+	TARGET_OPTIONS="$HOST_OPTIONS --with-sysroot=$SYSROOT  --target=$2 --disable-nls --enable-version-specific-runtime-libs "
+	TARGET_OPTIONS="$TARGET_OPTIONS --enable-static"
+	MINGW_OPTIONS="$HOST_OPTIONS --prefix=$SYSROOT/mingw --enable-lib32 --enable-lib64 --host=$2"
+	case $2 in
 	*"mingw32"*)
-		build_package mingw_headers "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-headers" "-with-sysroot=$SYSROOT --prefix=$SYSROOT/mingw --host=$2"
+		TARGET_OPTIONS="$TARGET_OPTIONS --enable-targets=x86_64-w64-mingw32,i686-w64-mingw32"
+		build_package mingw_headers "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-headers" "$MINGW_OPTIONS"
 		;;
 	esac
-	GCC_OPTIONS="$TARGET_OPTIONS --enable-targets=all --enable-languages=c,c++"
-	#if [ "$1" = "$2" ]; then
-	#	GCC_OPTIONS="$GCC_OPTIONS --enable-threads=posix"
-	#fi
+	build_package binutils "$SRC_DIR/binutils-${BINUTILS_VERSION}" "$TARGET_OPTIONS"
+	GCC_OPTIONS="$TARGET_OPTIONS --enable-languages=c,c++"
 	build_package gcc.step1 "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS" "all-gcc" "install-gcc"
-	case $CFG_TARGET in
+	case $2 in
 	*"mingw32"*)
-		build_package mingw_crt "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}" "$HOST_OPTIONS -with-sysroot=$SYSROOT --prefix=$SYSROOT/mingw --enable-lib32 --enable-lib64 --host=$2 --with-libraries=winpthreads"
+		build_package mingw_crt "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}" "$MINGW_OPTIONS"
+		#build_package mingw_crt "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}" "$MINGW_OPTIONS --with-libraries=winpthreads"
 		;;
 	esac
 	build_package gcc.step2 "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS"
-	if [ "$1" = "$2" ]; then
-		echo "GDB"
-		#		build_package gdb "$SRC_DIR/gdb-${GDB_VERSION}" "$BASE_OPTIONS -prefix=$SYSROOT"
-	fi
+	HOST_SYSROOT="$SYSROOT"
 }
 
 # Create work directory
@@ -166,3 +184,14 @@ build_toolchain "$CFG_BUILD" "$CFG_TARGET"
 if [ "$CFG_BUILD" != "$CFG_HOST" ]; then
 	build_toolchain "$CFG_HOST" "$CFG_TARGET"
 fi
+
+rm -f main.exe main.32.exe
+# Try in 64 bits
+wine64 x86_64-w64-mingw32-8.4.0/bin/gcc.exe ../main.c -o main.exe
+file main.exe
+wine64 main.exe
+# Try in 32 bits
+wine64 x86_64-w64-mingw32-8.4.0/bin/gcc.exe ../main.c -m32 -o main.32.exe
+file main.32.exe
+wine64 main.32.exe
+
