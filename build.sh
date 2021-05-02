@@ -94,7 +94,6 @@ build_package() {
 					exit 1
 				}
 			fi
-			MAKE_FLAGS=""
 			if [ -z ${5+x} ]; then
 				make install || {
 					echo "Configure failed for $2"
@@ -130,9 +129,7 @@ build_toolchain() {
 		BASE_OPTIONS="--prefix=$SYSROOT --enable-shared  --host=$1"
 		LIBS_OPTIONS="--disable-static"
 	fi
-	if [ "$1" = "x86_64-w64-mingw32" ]; then
-		export LDFLAGS="$LDFLAGS -L$HOST_SYSROOT/lib/gcc/$1/lib"
-	fi
+	export LDFLAGS="-L$HOST_SYSROOT/lib/gcc/$1/lib"
 	HOST_OPTIONS="$BASE_OPTIONS"
 	build_package gmp "$SRC_DIR/gmp-${GMP_VERSION}" "$HOST_OPTIONS $LIBS_OPTIONS"
 	HOST_OPTIONS="$HOST_OPTIONS --with-gmp=$SYSROOT"
@@ -146,6 +143,7 @@ build_toolchain() {
 		fi
 	fi
 	build_package isl "$SRC_DIR/isl-${ISL_VERSION}" "$BASE_OPTIONS $LIBS_OPTIONS --with-sysroot=$SYSROOT --with-gmp-prefix=$SYSROOT"
+	MAKE_FLAGS=""
 	HOST_OPTIONS="$HOST_OPTIONS --with-isl=$SYSROOT"
 	TARGET_OPTIONS="$HOST_OPTIONS --with-sysroot=$SYSROOT  --target=$2 --disable-nls --enable-version-specific-runtime-libs "
 	TARGET_OPTIONS="$TARGET_OPTIONS --enable-static"
@@ -194,4 +192,3 @@ wine64 main.exe
 wine64 x86_64-w64-mingw32-8.4.0/bin/gcc.exe ../main.c -m32 -o main.32.exe
 file main.32.exe
 wine64 main.32.exe
-
