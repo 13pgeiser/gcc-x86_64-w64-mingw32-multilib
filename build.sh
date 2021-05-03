@@ -122,12 +122,14 @@ build_toolchain() {
 	export PATH="$SYSROOT/bin:$PATH"
 	export LD_LIBRARY_PATH="$SYSROOT/lib:$LD_LIBRARY_PATH"
 	echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
-	BASE_OPTIONS="--prefix=$SYSROOT --enable-static --disable-shared --host=$1"
+	BASE_OPTIONS="--prefix=$SYSROOT--host=$1"
 	LIBS_OPTIONS=""
 	MAKE_FLAGS=""
 	if [ "$shared" = true ]; then
 		BASE_OPTIONS="--prefix=$SYSROOT --enable-shared  --host=$1"
 		LIBS_OPTIONS="--disable-static"
+	else
+		BASE_OPTIONS="--prefix=$SYSROOT --enable-static  --disable-shared --host=$1"
 	fi
 	export LDFLAGS="-L$HOST_SYSROOT/lib/gcc/$1/lib"
 	HOST_OPTIONS="$BASE_OPTIONS"
@@ -146,12 +148,16 @@ build_toolchain() {
 	MAKE_FLAGS=""
 	HOST_OPTIONS="$HOST_OPTIONS --with-isl=$SYSROOT"
 	TARGET_OPTIONS="$HOST_OPTIONS --with-sysroot=$SYSROOT  --target=$2 --disable-nls --enable-version-specific-runtime-libs "
-	TARGET_OPTIONS="$TARGET_OPTIONS --enable-static"
-	MINGW_OPTIONS="$HOST_OPTIONS --prefix=$SYSROOT/mingw --enable-lib32 --enable-lib64 --host=$2"
+	#TARGET_OPTIONS="$TARGET_OPTIONS"
+	#MINGW_OPTIONS="$HOST_OPTIONS --prefix=$SYSROOT/$2 --enable-lib32 --enable-lib64 --enable-wildcard --host=$2"
+	MINGW_OPTIONS="$HOST_OPTIONS --prefix=$SYSROOT/$2 --enable-lib32 --enable-lib64 --host=$2"
 	case $2 in
 	*"mingw32"*)
 		TARGET_OPTIONS="$TARGET_OPTIONS --enable-targets=x86_64-w64-mingw32,i686-w64-mingw32"
 		build_package mingw_headers "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-headers" "$MINGW_OPTIONS"
+		ln -s -f $SYSROOT/$2 $SYSROOT/mingw
+		mkdir -p $SYSROOT/$2/lib
+		ln -s -f $SYSROOT/$2/lib $SYSROOT/$2/lib64
 		;;
 	esac
 	build_package binutils "$SRC_DIR/binutils-${BINUTILS_VERSION}" "$TARGET_OPTIONS"
