@@ -120,22 +120,23 @@ build_toolchain() {
 	figlet "$2" -w 140
 	BUILD_DIR="$WRK_DIR/$1_build"
 	mkdir -p "$BUILD_DIR"
-	SYSROOT="$WRK_DIR/$1-${GCC_VERSION}"
+	SYSROOT="$WRK_DIR/$1_sysroot"
 	mkdir -p "$SYSROOT"
-	export PATH="$SYSROOT/bin:$PATH"
-	export LD_LIBRARY_PATH="$SYSROOT/lib:$LD_LIBRARY_PATH"
-	echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
-	BASE_OPTIONS="--prefix=$SYSROOT --host=$1"
+	PREFIX="$WRK_DIR/$1-${GCC_VERSION}"
+	mkdir -p "$PREFIX"
+	export PATH="$PREFIX/bin:$PATH"
+	export LD_LIBRARY_PATH="$PREFIX/lib:$LD_LIBRARY_PATH"
+	BASE_OPTIONS="-host=$1"
 	LIBS_OPTIONS=""
 	MAKE_FLAGS=""
 	if [ "$shared" = true ]; then
 		BASE_OPTIONS="$BASE_OPTIONS --enable-shared"
-		LIBS_OPTIONS="$LIBS_OPTIONS --disable-static"
+		LIBS_OPTIONS="$LIBS_OPTIONS --disable-static --prefix=$SYSROOT"
 	else
 		BASE_OPTIONS="$BASE_OPTIONS --enable-static --disable-shared"
-		# LIBS_OPTIONS="$LIBS_OPTIONS"
+		LIBS_OPTIONS="$LIBS_OPTIONS --prefix=$SYSROOT"
 	fi
-	export LDFLAGS="-L$HOST_SYSROOT/lib/gcc/$1/lib"
+	export LDFLAGS="-L$HOST_PREFIX/lib/gcc/$1/lib"
 	HOST_OPTIONS="$BASE_OPTIONS"
 	# GMP
 	build_package gmp "$SRC_DIR/gmp-${GMP_VERSION}" "$HOST_OPTIONS $LIBS_OPTIONS"
@@ -156,10 +157,10 @@ build_toolchain() {
 	MAKE_FLAGS=""
 	HOST_OPTIONS="$HOST_OPTIONS --with-isl=$SYSROOT"
 	# Prepare options
-	TARGET_OPTIONS="$HOST_OPTIONS --with-sysroot=$SYSROOT --target=$2 --disable-nls"
+	TARGET_OPTIONS="$HOST_OPTIONS --with-sysroot=$SYSROOT --prefix=$PREFIX --target=$2 --disable-nls"
 	BINUTILS_OPTIONS="$TARGET_OPTIONS"
 	GCC_OPTIONS="$TARGET_OPTIONS --enable-languages=c,c++"
-	MINGW_CRT_OPTIONS="--with-sysroot=$SYSROOT/$2 --prefix=$SYSROOT/$2 --host=$2"
+	MINGW_CRT_OPTIONS="--with-sysroot=$SYSROOT/$2 --prefix=$PREFIX/$2 --host=$2"
 	if [ "$multilib" = true ]; then
 		BINUTILS_OPTIONS="$BINUTILS_OPTIONS --enable-targets=x86_64-w64-mingw32,i686-w64-mingw32"
 		GCC_OPTIONS="$GCC_OPTIONS --enable-targets=all"
@@ -172,8 +173,8 @@ build_toolchain() {
 	# MinGW headers
 	case $2 in
 	*"mingw32"*)
-		build_package mingw_headers "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-headers" "-build=$1 --host=$2 --prefix=$SYSROOT/$2"
-		ln -s -f "$SYSROOT/$2" "$SYSROOT/mingw"
+		build_package mingw_headers "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-headers" "-build=$1 --host=$2 --prefix=$PREFIX/$2"
+		ln -s -f "$PREFIX/$2" "$SYSROOT/mingw"
 		;;
 	esac
 	# Binutils
@@ -185,7 +186,7 @@ build_toolchain() {
 	*"mingw32"*)
 		build_package mingw_crt "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-crt" "$MINGW_CRT_OPTIONS"
 		build_package mingw_pthreads "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-libraries/winpthreads" "$MINGW_CRT_OPTIONS"
-		cp -f "$SYSROOT/$2/bin/libwinpthread-1.dll" "$SYSROOT/$2/lib"
+		cp -f "$PREFIX/$2/bin/libwinpthread-1.dll" "$PREFIX/$2/lib"
 		if [ "$multilib" = true ]; then
 			export CC="$2-gcc -m32"
 			export CCAS="$2-gcc -m32"
@@ -196,14 +197,14 @@ build_toolchain() {
 			unset DLLTOOL
 			unset CCAS
 			unset CC
-			cp -f -a "$BUILD_DIR"/mingw32/lib/* "$SYSROOT/$2/lib32/"
-			cp -f -a "$BUILD_DIR"/mingw32/bin/*.dll "$SYSROOT/$2/lib32/"
+			cp -f -a "$BUILD_DIR"/mingw32/lib/* "$PREFIX/$2/lib32/"
+			cp -f -a "$BUILD_DIR"/mingw32/bin/*.dll "$PREFIX/$2/lib32/"
 		fi
 		;;
 	esac
 	# GCC step 2
 	build_package gcc.step2 "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS"
-	HOST_SYSROOT="$SYSROOT"
+	HOST_PREFIX="$PREFIX"
 }
 
 # Create work directory
@@ -224,7 +225,7 @@ if [ "$CFG_BUILD" != "$CFG_HOST" ]; then
 	build_toolchain "$CFG_HOST" "$CFG_TARGET"
 fi
 
-cp -f "$SYSROOT/x86_64-w64-mingw32/lib/libwinpthread-1.dll" .
+cp -f "$PREFIX/x86_64-w64-mingw32/lib/libwinpthread-1.dll" .
 rm -f main.exe main.32.exe
 
 # Try in 64 bits
@@ -242,6 +243,6 @@ wine64 main.exe
 # Try cpp in 32 bits
 wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/g++.exe ../main.cpp -m32 -o main.32.exe
 file main.32.exe
-cp -f "$SYSROOT/x86_64-w64-mingw32/lib32/libwinpthread-1.dll" .
+cp -f "$PREFIX/x86_64-w64-mingw32/lib32/libwinpthread-1.dll" .
 wine64 main.32.exe
 exit 0
