@@ -9,7 +9,7 @@ CFG_TARGET="x86_64-w64-mingw32"
 MPFR_VERSION=4.1.0
 GMP_VERSION=6.2.1
 MPC_VERSION=1.2.1
-ISL_VERSION=0.18
+ISL_VERSION=0.24
 ZSTD_VERSION=1.4.9
 BINUTILS_VERSION=2.36
 GCC_VERSION=8.4.0
@@ -41,8 +41,8 @@ download() {
 			tar xvzf mpc-${MPC_VERSION}.tar.gz
 		fi
 		if [ ! -e "isl-${ISL_VERSION}" ]; then
-			wget https://gcc.gnu.org/pub/gcc/infrastructure/isl-${ISL_VERSION}.tar.bz2
-			tar xvjf isl-${ISL_VERSION}.tar.bz2
+			wget http://isl.gforge.inria.fr/isl-${ISL_VERSION}.tar.xz
+			tar xvJf isl-${ISL_VERSION}.tar.xz
 		fi
 		if [ ! -e "zstd-${ZSTD_VERSION}" ]; then
 			wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz
@@ -84,24 +84,24 @@ build_package() {
 			if [ -z ${4+x} ]; then
 				# shellcheck disable=SC2086
 				make -j "$JOBS" $MAKE_FLAGS || {
-					echo "Configure failed for $2"
+					echo "Make failed for $2"
 					exit 1
 				}
 			else
 				# shellcheck disable=SC2086
 				make -j "$JOBS" "$4" $MAKE_FLAGS || {
-					echo "Configure failed for $2"
+					echo "Make failed for $2"
 					exit 1
 				}
 			fi
 			if [ -z ${5+x} ]; then
-				make install || {
-					echo "Configure failed for $2"
+				make install $MAKE_FLAGS || {
+					echo "Make install failed for $2"
 					exit 1
 				}
 			else
-				make "$5" || {
-					echo "Configure failed for $2"
+				make "$5" $MAKE_FLAGS || {
+					echo "Make install failed for $2"
 					exit 1
 				}
 			fi
@@ -157,12 +157,12 @@ build_toolchain() {
 	BINUTILS_OPTIONS="$TARGET_OPTIONS"
 	GCC_OPTIONS="$TARGET_OPTIONS --enable-languages=c,c++"
 	MINGW_CRT_OPTIONS="--with-sysroot=$SYSROOT/$2 --prefix=$SYSROOT/$2 --host=$2"
-	if [ "multilib" = true ]; then
+	if [ "$multilib" = true ]; then
 		BINUTILS_OPTIONS="$BINUTILS_OPTIONS --enable-targets=x86_64-w64-mingw32,i686-w64-mingw32"
 		GCC_OPTIONS="$GCC_OPTIONS --enable-targets=all"
 		MINGW_CRT_OPTIONS="$MINGW_CRT_OPTIONS --enable-lib32"
 	fi
-	#GCC_OPTIONS="$GCC_OPTIONS --enable-threads=posix"
+	GCC_OPTIONS="$GCC_OPTIONS --enable-threads=posix"
 	if [ "$shared" = true ]; then
 		TARGET_OPTIONS="$TARGET_OPTIONS --enable-multilib --enable-version-specific-runtime-libs --enable-sjlj-exceptions"
 	fi
@@ -183,7 +183,21 @@ build_toolchain() {
 	case $2 in
 	*"mingw32"*)
 		build_package mingw_crt "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-crt" "$MINGW_CRT_OPTIONS"
-		#build_package mingw_pthreads "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-libraries/winpthreads" "$MINGW_OPTIONS"
+		build_package mingw_pthreads "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-libraries/winpthreads" "$MINGW_CRT_OPTIONS"
+		cp -f "$SYSROOT/$2/bin/libwinpthread-1.dll" "$SYSROOT/$2/lib"
+		if [ "$multilib" = true ]; then
+			export CC="$2-gcc -m32"
+			export CCAS="$2-gcc -m32"
+			export DLLTOOL="$2-dlltool -m i386"
+			export RC="$2-windres -F pe-i386"
+			build_package mingw_pthreads_32 "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-libraries/winpthreads" "$MINGW_CRT_OPTIONS -prefix=$BUILD_DIR/mingw32"
+			unset RC
+			unset DLLTOOL
+			unset CCAS
+			unset CC
+			cp -f -a $BUILD_DIR/mingw32/lib/* $SYSROOT/$2/lib32/
+			cp -f -a $BUILD_DIR/mingw32/bin/*.dll $SYSROOT/$2/lib32/
+		fi
 		;;
 	esac
 	# GCC step 2
@@ -209,7 +223,9 @@ if [ "$CFG_BUILD" != "$CFG_HOST" ]; then
 	build_toolchain "$CFG_HOST" "$CFG_TARGET"
 fi
 
+cp -f $SYSROOT/x86_64-w64-mingw32/lib/libwinpthread-1.dll .
 rm -f main.exe main.32.exe
+
 # Try in 64 bits
 wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/gcc.exe ../main.c -o main.exe
 file main.exe
@@ -218,3 +234,13 @@ wine64 main.exe
 wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/gcc.exe ../main.c -m32 -o main.32.exe
 file main.32.exe
 wine64 main.32.exe
+# Try cpp in 64 bits
+wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/g++.exe ../main.cpp -o main.exe
+file main.exe
+wine64 main.exe
+# Try cpp in 32 bits
+wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/g++.exe ../main.cpp -m32 -o main.32.exe
+file main.32.exe
+cp -f $SYSROOT/x86_64-w64-mingw32/lib32/libwinpthread-1.dll .
+wine64 main.32.exe
+exit 0
