@@ -20,7 +20,7 @@ GDB_VERSION=10.2
 # Default folders
 SRC_DIR="$(pwd)/sources"
 WRK_DIR="$(pwd)/workdir"
-JOBS=$(( $(nproc) * 2 ))
+JOBS=$(($(nproc) * 2))
 #JOBS=1
 LD_LIBRARY_PATH=""
 HOST_SYSROOT=""
@@ -95,11 +95,13 @@ build_package() {
 				}
 			fi
 			if [ -z ${5+x} ]; then
+				# shellcheck disable=SC2086
 				make install $MAKE_FLAGS || {
 					echo "Make install failed for $2"
 					exit 1
 				}
 			else
+				# shellcheck disable=SC2086
 				make "$5" $MAKE_FLAGS || {
 					echo "Make install failed for $2"
 					exit 1
@@ -123,14 +125,15 @@ build_toolchain() {
 	export PATH="$SYSROOT/bin:$PATH"
 	export LD_LIBRARY_PATH="$SYSROOT/lib:$LD_LIBRARY_PATH"
 	echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
-	BASE_OPTIONS="--prefix=$SYSROOT--host=$1"
+	BASE_OPTIONS="--prefix=$SYSROOT --host=$1"
 	LIBS_OPTIONS=""
 	MAKE_FLAGS=""
 	if [ "$shared" = true ]; then
-		BASE_OPTIONS="--prefix=$SYSROOT --enable-shared  --host=$1"
-		LIBS_OPTIONS="--disable-static"
+		BASE_OPTIONS="$BASE_OPTIONS --enable-shared"
+		LIBS_OPTIONS="$LIBS_OPTIONS --disable-static"
 	else
-		BASE_OPTIONS="--prefix=$SYSROOT --enable-static  --disable-shared --host=$1"
+		BASE_OPTIONS="$BASE_OPTIONS --enable-static --disable-shared"
+		# LIBS_OPTIONS="$LIBS_OPTIONS"
 	fi
 	export LDFLAGS="-L$HOST_SYSROOT/lib/gcc/$1/lib"
 	HOST_OPTIONS="$BASE_OPTIONS"
@@ -170,9 +173,7 @@ build_toolchain() {
 	case $2 in
 	*"mingw32"*)
 		build_package mingw_headers "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-headers" "-build=$1 --host=$2 --prefix=$SYSROOT/$2"
-		ln -s -f $SYSROOT/$2 $SYSROOT/mingw
-		mkdir -p $SYSROOT/$2/lib
-		ln -s -f $SYSROOT/$2/lib $SYSROOT/$2/lib64
+		ln -s -f "$SYSROOT/$2" "$SYSROOT/mingw"
 		;;
 	esac
 	# Binutils
@@ -195,8 +196,8 @@ build_toolchain() {
 			unset DLLTOOL
 			unset CCAS
 			unset CC
-			cp -f -a $BUILD_DIR/mingw32/lib/* $SYSROOT/$2/lib32/
-			cp -f -a $BUILD_DIR/mingw32/bin/*.dll $SYSROOT/$2/lib32/
+			cp -f -a "$BUILD_DIR"/mingw32/lib/* "$SYSROOT/$2/lib32/"
+			cp -f -a "$BUILD_DIR"/mingw32/bin/*.dll "$SYSROOT/$2/lib32/"
 		fi
 		;;
 	esac
@@ -223,7 +224,7 @@ if [ "$CFG_BUILD" != "$CFG_HOST" ]; then
 	build_toolchain "$CFG_HOST" "$CFG_TARGET"
 fi
 
-cp -f $SYSROOT/x86_64-w64-mingw32/lib/libwinpthread-1.dll .
+cp -f "$SYSROOT/x86_64-w64-mingw32/lib/libwinpthread-1.dll" .
 rm -f main.exe main.32.exe
 
 # Try in 64 bits
@@ -241,6 +242,6 @@ wine64 main.exe
 # Try cpp in 32 bits
 wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/g++.exe ../main.cpp -m32 -o main.32.exe
 file main.32.exe
-cp -f $SYSROOT/x86_64-w64-mingw32/lib32/libwinpthread-1.dll .
+cp -f "$SYSROOT/x86_64-w64-mingw32/lib32/libwinpthread-1.dll" .
 wine64 main.32.exe
 exit 0
