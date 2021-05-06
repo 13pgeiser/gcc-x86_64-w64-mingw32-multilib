@@ -10,10 +10,8 @@ MPFR_VERSION=4.1.0
 GMP_VERSION=6.2.1
 MPC_VERSION=1.2.1
 ISL_VERSION=0.24
-ZSTD_VERSION=1.4.9
 BINUTILS_VERSION=2.36
 GCC_VERSION=8.4.0
-GCC_VERSION=10.3.0
 MINGW64_VERSION=7.0.0
 GDB_VERSION=10.2
 
@@ -22,8 +20,6 @@ SRC_DIR="$(pwd)/sources"
 WRK_DIR="$(pwd)/workdir"
 JOBS=$(($(nproc) * 2))
 #JOBS=1
-LD_LIBRARY_PATH=""
-HOST_SYSROOT=""
 
 download() {
 	(
@@ -43,10 +39,6 @@ download() {
 		if [ ! -e "isl-${ISL_VERSION}" ]; then
 			wget http://isl.gforge.inria.fr/isl-${ISL_VERSION}.tar.xz
 			tar xvJf isl-${ISL_VERSION}.tar.xz
-		fi
-		if [ ! -e "zstd-${ZSTD_VERSION}" ]; then
-			wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz
-			tar xvzf zstd-${ZSTD_VERSION}.tar.gz
 		fi
 		if [ ! -e "binutils-${BINUTILS_VERSION}" ]; then
 			wget https://mirror.easyname.at/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz
@@ -114,7 +106,7 @@ build_package() {
 
 build_toolchain() {
 	multilib=true
-	shared=false
+	shared=true
 	figlet "$1" -w 140
 	figlet " -> "
 	figlet "$2" -w 140
@@ -132,6 +124,7 @@ build_toolchain() {
 	if [ "$shared" = true ]; then
 		BASE_OPTIONS="$BASE_OPTIONS --enable-shared"
 		LIBS_OPTIONS="$LIBS_OPTIONS --disable-static --prefix=$SYSROOT"
+		export LD_LIBRARY_PATH="$SYSROOT/lib:$LD_LIBRARY_PATH"
 	else
 		BASE_OPTIONS="$BASE_OPTIONS --enable-static --disable-shared"
 		LIBS_OPTIONS="$LIBS_OPTIONS --prefix=$SYSROOT"
@@ -165,16 +158,16 @@ build_toolchain() {
 		BINUTILS_OPTIONS="$BINUTILS_OPTIONS --enable-targets=x86_64-w64-mingw32,i686-w64-mingw32"
 		GCC_OPTIONS="$GCC_OPTIONS --enable-targets=all"
 		MINGW_CRT_OPTIONS="$MINGW_CRT_OPTIONS --enable-lib32"
+		#TARGET_OPTIONS="$TARGET_OPTIONS --enable-multilib --enable-version-specific-runtime-libs"
 	fi
 	GCC_OPTIONS="$GCC_OPTIONS --enable-threads=posix"
-	if [ "$shared" = true ]; then
-		TARGET_OPTIONS="$TARGET_OPTIONS --enable-multilib --enable-version-specific-runtime-libs --enable-sjlj-exceptions"
-	fi
 	# MinGW headers
 	case $2 in
 	*"mingw32"*)
 		build_package mingw_headers "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}/mingw-w64-headers" "-build=$1 --host=$2 --prefix=$PREFIX/$2"
 		ln -s -f "$PREFIX/$2" "$SYSROOT/mingw"
+		mkdir -p "$SYSROOT/$2/lib"
+		ln -s -f "$SYSROOT/$2/lib" "$SYSROOT/$2/lib64"
 		;;
 	esac
 	# Binutils
@@ -203,8 +196,15 @@ build_toolchain() {
 		;;
 	esac
 	# GCC step 2
-	build_package gcc.step2 "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS"
+	build_package gcc.step2 "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS" "all" "install-strip"
 	HOST_PREFIX="$PREFIX"
+	if [ "$shared" = true ]; then
+		echo "$SYSROOT/bin"
+		if [ -e "$SYSROOT"/bin ]; then
+			cp -f -a "$SYSROOT"/bin/*.dll "$PREFIX"/lib
+		fi
+	fi
+	#build_package gdb "$SRC_DIR/gdb-${GDB_VERSION}" "$BINUTILS_OPTIONS"
 }
 
 # Create work directory
@@ -225,24 +225,24 @@ if [ "$CFG_BUILD" != "$CFG_HOST" ]; then
 	build_toolchain "$CFG_HOST" "$CFG_TARGET"
 fi
 
-cp -f "$PREFIX/x86_64-w64-mingw32/lib/libwinpthread-1.dll" .
 rm -f main.exe main.32.exe
 
-# Try in 64 bits
-wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/gcc.exe ../main.c -o main.exe
-file main.exe
-wine64 main.exe
-# Try in 32 bits
-wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/gcc.exe ../main.c -m32 -o main.32.exe
-file main.32.exe
-wine64 main.32.exe
+export WINEPATH="x86_64-w64-mingw32-${GCC_VERSION}/bin;x86_64-w64-mingw32-${GCC_VERSION}/lib"
+cp -f  "x86_64-w64-mingw32-${GCC_VERSION}"/x86_64-w64-mingw32/bin/libwinpthread-1.dll  "x86_64-w64-mingw32-${GCC_VERSION}/bin"
+cp -f  "x86_64-w64-mingw32-${GCC_VERSION}"/lib/*.dll  "x86_64-w64-mingw32-${GCC_VERSION}/bin"
+rm -f "x86_64-w64-mingw32-${GCC_VERSION}/bin/libstdc++-6.dll"
+cp -f x86_64-linux-gnu_build/gcc/x86_64-w64-mingw32/libstdc++-v3/src/.libs/libstdc++-6.dll "x86_64-w64-mingw32-${GCC_VERSION}/lib"
+cp -f x86_64-linux-gnu_build/gcc/x86_64-w64-mingw32/32/libstdc++-v3/src/.libs/libstdc++-6.dll "x86_64-w64-mingw32-${GCC_VERSION}/lib32"
+
 # Try cpp in 64 bits
 wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/g++.exe ../main.cpp -o main.exe
 file main.exe
 wine64 main.exe
+
 # Try cpp in 32 bits
 wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/g++.exe ../main.cpp -m32 -o main.32.exe
 file main.32.exe
-cp -f "$PREFIX/x86_64-w64-mingw32/lib32/libwinpthread-1.dll" .
+export WINEPATH="x86_64-w64-mingw32-${GCC_VERSION}/x86_64-w64-mingw32/lib32;x86_64-w64-mingw32-${GCC_VERSION}/lib32"
 wine64 main.32.exe
+
 exit 0
