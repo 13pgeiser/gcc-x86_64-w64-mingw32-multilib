@@ -177,8 +177,16 @@ build_toolchain() {
 	# GCC step 2
 	build_package gcc.step2 "$SRC_DIR/gcc-${GCC_VERSION}" "$GCC_OPTIONS" "all" "install-strip"
 	# Zlib
-	#export CHOST="$2-gcc"
-	#build_package zlib "$SRC_DIR/zlib-${ZLIB_VERSION}" "--prefix=$PREFIX/$2" "CFLAGS=-fPIC LDSHARED=\"CC -fPIC\""
+	(
+		if [ ! -e "$BUILD_DIR/zlib_stamp.$1" ]; then
+			cd "$SRC_DIR/zlib-${ZLIB_VERSION}"
+			make -f win32/Makefile.gcc clean
+			make -f win32/Makefile.gcc -j "$JOBS" SHARED_MODE=0 PREFIX=$2- BINARY_PATH="$PREFIX/$2/bin" INCLUDE_PATH="$PREFIX/$2/include" LIBRARY_PATH="$PREFIX/$2/lib" install
+			make -f win32/Makefile.gcc clean
+			make -f win32/Makefile.gcc LOC="-m32" RC="$2-windres -F pe-i386" -j "$JOBS" SHARED_MODE=0 PREFIX=$2- BINARY_PATH="$PREFIX/$2/lib32" INCLUDE_PATH="$PREFIX/$2/include" LIBRARY_PATH="$PREFIX/$2/lib32" install
+			touch "$BUILD_DIR/zlib_stamp.$1"
+		fi
+	)
 }
 
 # Create work directory
@@ -212,6 +220,11 @@ cp -f x86_64-linux-gnu_build/gcc/x86_64-w64-mingw32/32/libstdc++-v3/src/.libs/li
 
 export WINEPATH="x86_64-w64-mingw32-${GCC_VERSION}/bin"
 rm -f main.exe main.32.exe
+
+# Try cpp in 64 bits
+wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/gcc.exe ../main.c -o main.exe -lz
+file main.exe
+wine64 main.exe
 
 # Try cpp in 64 bits
 wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/g++.exe ../main.cpp -o main.exe
