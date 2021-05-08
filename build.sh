@@ -221,13 +221,18 @@ cp -f x86_64-linux-gnu_build/gcc/x86_64-w64-mingw32/32/libstdc++-v3/src/.libs/li
 export WINEPATH="x86_64-w64-mingw32-${GCC_VERSION}/bin"
 rm -f main.exe main.32.exe
 
-# Try cpp in 64 bits
+# Try c in 64 bits
 wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/gcc.exe ../main.c -o main.exe -lz
 file main.exe
 wine64 main.exe
 
 # Try cpp in 64 bits
 wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/g++.exe ../main.cpp -o main.exe
+file main.exe
+wine64 main.exe
+
+# Try c in 32 bits
+wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/gcc.exe ../main.c -m32 -o main.exe -lz
 file main.exe
 wine64 main.exe
 
