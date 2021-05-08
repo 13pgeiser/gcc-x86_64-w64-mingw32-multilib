@@ -1,14 +1,9 @@
 FROM debian:buster-slim
 
 RUN set -ex \
-	&& mkdir -p /usr/local/gcc-ming64
-
-WORKDIR /usr/local/gcc-ming64
-
-RUN set -ex \
 	&& apt-get update \
 	&& apt-get dist-upgrade -y \
-	&& apt-get install -y --no-install-recommends \
+	&& apt-get install -y \
 		autoconf \
 		automake \
 		bison \
@@ -17,19 +12,23 @@ RUN set -ex \
 		ca-certificates \
 		curl \
 		figlet \
+		file \
 		flex \
 		git \
 		gzip \
 		lzip \
+		p7zip-full \
 		texinfo \
 		wget \
 		xz-utils \
 	&& apt-get clean \
 	&& rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
 
-
-COPY build.sh .
-
 RUN set -ex \
-	&& ./build.sh
-
+	&& dpkg --add-architecture i386 \
+	&& apt-get update \
+	&& apt-get install -y \
+		wine32 \
+		wine64 \
+	&& apt-get clean \
+	&& rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
