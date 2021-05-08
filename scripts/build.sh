@@ -28,39 +28,39 @@ download() {
 	cd "$SRC_DIR"
 	if [ ! -e "gmp-${GMP_VERSION}" ]; then
 		wget https://gmplib.org/download/gmp/gmp-${GMP_VERSION}.tar.lz
-		tar --lzip -xvf gmp-${GMP_VERSION}.tar.lz
+		tar --lzip -xf gmp-${GMP_VERSION}.tar.lz
 	fi
 	if [ ! -e "mpfr-${MPFR_VERSION}" ]; then
 		wget https://www.mpfr.org/mpfr-current/mpfr-${MPFR_VERSION}.tar.xz
-		tar xvJf mpfr-${MPFR_VERSION}.tar.xz
+		tar xJf mpfr-${MPFR_VERSION}.tar.xz
 	fi
 	if [ ! -e "mpc-${MPC_VERSION}" ]; then
 		wget https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VERSION}.tar.gz
-		tar xvzf mpc-${MPC_VERSION}.tar.gz
+		tar xzf mpc-${MPC_VERSION}.tar.gz
 	fi
 	if [ ! -e "isl-${ISL_VERSION}" ]; then
 		wget http://isl.gforge.inria.fr/isl-${ISL_VERSION}.tar.xz
-		tar xvJf isl-${ISL_VERSION}.tar.xz
+		tar xJf isl-${ISL_VERSION}.tar.xz
 	fi
 	if [ ! -e "zlib-${ZLIB_VERSION}" ]; then
 		wget https://zlib.net/zlib-${ZLIB_VERSION}.tar.xz
-		tar xvJf zlib-${ZLIB_VERSION}.tar.xz
+		tar xJf zlib-${ZLIB_VERSION}.tar.xz
 	fi
 	if [ ! -e "binutils-${BINUTILS_VERSION}" ]; then
 		wget https://mirror.easyname.at/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz
-		tar xvJf binutils-${BINUTILS_VERSION}.tar.xz
+		tar xJf binutils-${BINUTILS_VERSION}.tar.xz
 	fi
 	if [ ! -e "gcc-${GCC_VERSION}" ]; then
 		wget http://mirror.koddos.net/gcc/releases/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz
-		tar xvJf gcc-${GCC_VERSION}.tar.xz
+		tar xJf gcc-${GCC_VERSION}.tar.xz
 	fi
 	if [ ! -e "mingw-w64-v${MINGW64_VERSION}" ]; then
 		wget https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v${MINGW64_VERSION}.tar.bz2
-		tar xvjf mingw-w64-v${MINGW64_VERSION}.tar.bz2
+		tar xjf mingw-w64-v${MINGW64_VERSION}.tar.bz2
 	fi
 	if [ ! -e "gdb-${GDB_VERSION}" ]; then
 		wget https://ftp.gnu.org/gnu/gdb/gdb-${GDB_VERSION}.tar.xz
-		tar xvJf gdb-${GDB_VERSION}.tar.xz
+		tar xJf gdb-${GDB_VERSION}.tar.xz
 	fi
 }
 
