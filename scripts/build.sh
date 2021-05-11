@@ -132,9 +132,9 @@ build_toolchain() {
 	# build prerequisites for GCC
 	build_prerequisites "$1"
 	# Prepare options
-	BASE_OPTIONS="--host=$1 --enable-static --enable-shared --with-gmp=$SYSROOT --with-mpfr=$SYSROOT --with-mpc=$SYSROOT --with-isl=$SYSROOT --with-sysroot=$SYSROOT --prefix=$PREFIX --target=$2"
+	BASE_OPTIONS="--host=$1 --enable-static --with-gmp=$SYSROOT --with-mpfr=$SYSROOT --with-mpc=$SYSROOT --with-isl=$SYSROOT --with-sysroot=$SYSROOT --prefix=$PREFIX --target=$2"
 	BINUTILS_OPTIONS="$BASE_OPTIONS --disable-nls"
-	GCC_OPTIONS="$BINUTILS_OPTIONS --enable-languages=c,c++ --enable-threads=$THREADS"
+	GCC_OPTIONS="$BINUTILS_OPTIONS --enable-shared --enable-languages=c,c++ --enable-threads=$THREADS"
 	MINGW_CRT_OPTIONS="--with-sysroot=$SYSROOT/$2 --prefix=$PREFIX/$2 --host=$2"
 	if [ "$MULTILIB" = true ]; then
 		GCC_OPTIONS="$GCC_OPTIONS --enable-targets=all"
@@ -189,6 +189,8 @@ build_toolchain() {
 			)
 		fi
 	)
+	build_package gdb "$SRC_DIR/gdb-${GDB_VERSION}" "$BINUTILS_OPTIONS"
+
 }
 
 move_if_exists() {
