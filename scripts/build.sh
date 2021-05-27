@@ -30,7 +30,7 @@ JOBS=$(($(nproc) * 2))
 #JOBS=1
 
 version() {
-	echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
+	echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'
 }
 
 download() {
@@ -44,19 +44,19 @@ download() {
 		tar xJf mpfr-${MPFR_VERSION}.tar.xz
 	fi
 	if [ ! -e "mpc-${MPC_VERSION}" ]; then
-		$WGET  https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VERSION}.tar.gz
+		$WGET https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VERSION}.tar.gz
 		tar xzf mpc-${MPC_VERSION}.tar.gz
 	fi
 	if [ ! -e "isl-${ISL_VERSION}" ]; then
-		$WGET  http://isl.gforge.inria.fr/isl-${ISL_VERSION}.tar.xz
+		$WGET http://isl.gforge.inria.fr/isl-${ISL_VERSION}.tar.xz
 		tar xJf isl-${ISL_VERSION}.tar.xz
 	fi
 	if [ ! -e "zlib-${ZLIB_VERSION}" ]; then
-		$WGET  https://zlib.net/zlib-${ZLIB_VERSION}.tar.xz
+		$WGET https://zlib.net/zlib-${ZLIB_VERSION}.tar.xz
 		tar xJf zlib-${ZLIB_VERSION}.tar.xz
 	fi
 	if [ ! -e "binutils-${BINUTILS_VERSION}" ]; then
-		$WGET  https://mirror.easyname.at/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz
+		$WGET https://ftpmirror.gnu.org/binutils/binutils-${BINUTILS_VERSION}.tar.xz
 		tar xJf binutils-${BINUTILS_VERSION}.tar.xz
 	fi
 	if [ ! -e "gcc-${GCC_VERSION}" ]; then
@@ -64,9 +64,9 @@ download() {
 		tar xJf gcc-${GCC_VERSION}.tar.xz
 	fi
 	if [ ! -e "mingw-w64-v${MINGW64_VERSION}" ]; then
-		$WGET  https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v${MINGW64_VERSION}.tar.bz2
+		$WGET https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v${MINGW64_VERSION}.tar.bz2
 		tar xjf mingw-w64-v${MINGW64_VERSION}.tar.bz2
-		if [ $(version "$GCC_VERSION") -ge $(version "11.0.0") ]; then
+		if [ "$(version "$GCC_VERSION")" -ge "$(version "11.0.0")" ]; then
 			(
 				cd "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}"
 				# from Liu Hao
@@ -76,7 +76,7 @@ download() {
 		fi
 	fi
 	if [ ! -e "gdb-${GDB_VERSION}" ]; then
-		$WGET  https://ftp.gnu.org/gnu/gdb/gdb-${GDB_VERSION}.tar.xz
+		$WGET https://ftp.gnu.org/gnu/gdb/gdb-${GDB_VERSION}.tar.xz
 		tar xJf gdb-${GDB_VERSION}.tar.xz
 	fi
 }
