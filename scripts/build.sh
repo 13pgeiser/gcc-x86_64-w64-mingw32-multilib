@@ -14,9 +14,9 @@ ZLIB_VERSION=1.2.11
 BINUTILS_VERSION=2.36.1
 GCC_VERSION=8.5.0
 GCC_VERSION=9.4.0
-#GCC_VERSION=10.3.0
-# GCC_VERSION=11.1.0 # Not yet ok.
-MINGW64_VERSION=8.0.0
+GCC_VERSION=10.3.0
+#GCC_VERSION=11.1.0 # Not yet ok.
+MINGW64_VERSION=9.0.0
 GDB_VERSION=10.2
 THREADS="posix"
 MULTILIB=true
@@ -151,7 +151,7 @@ build_toolchain() {
 	# Prepare options
 	BASE_OPTIONS="--host=$1 --enable-static --with-gmp=$SYSROOT --with-mpfr=$SYSROOT --with-mpc=$SYSROOT --with-isl=$SYSROOT --with-sysroot=$SYSROOT --prefix=$PREFIX --target=$2"
 	BINUTILS_OPTIONS="$BASE_OPTIONS --disable-nls"
-	GCC_OPTIONS="$BINUTILS_OPTIONS --enable-shared --enable-languages=c,c++ --enable-threads=$THREADS"
+	GCC_OPTIONS="$BINUTILS_OPTIONS --enable-shared --enable-languages=c,c++,fortran,lto,objc --enable-threads=$THREADS"
 	MINGW_CRT_OPTIONS="--with-sysroot=$SYSROOT/$2 --prefix=$PREFIX/$2 --host=$2"
 	if [ "$MULTILIB" = true ]; then
 		GCC_OPTIONS="$GCC_OPTIONS --enable-targets=all"
@@ -206,8 +206,11 @@ build_toolchain() {
 			)
 		fi
 	)
+	if [ "$1" = "x86_64-w64-mingw32" ]; then
+		export LOADLIBES="-lbcrypt"
+	fi
 	build_package gdb "$SRC_DIR/gdb-${GDB_VERSION}" "$BINUTILS_OPTIONS"
-
+	unset LOADLIBES
 }
 
 move_if_exists() {
