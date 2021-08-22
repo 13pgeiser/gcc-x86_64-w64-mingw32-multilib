@@ -15,7 +15,7 @@ BINUTILS_VERSION=2.36.1
 GCC_VERSION=8.5.0
 GCC_VERSION=9.4.0
 GCC_VERSION=10.3.0
-#GCC_VERSION=11.1.0 # Not yet ok.
+#GCC_VERSION=11.2.0 # Not yet ok.
 MINGW64_VERSION=9.0.0
 GDB_VERSION=10.2
 THREADS="posix"
@@ -25,7 +25,8 @@ ROOT_DIR="$(pwd)"
 PATCH_DIR="$(pwd)/patches"
 SRC_DIR="$(pwd)/sources"
 WRK_DIR="$(pwd)/workdir"
-WGET="wget --backups=1"
+#DOWNLOAD="wget -c --tries=40 --read-timeout=2 --backups=1"
+DOWNLOAD="curl  -O -J -L --retry 20"
 JOBS=$(($(nproc) * 2))
 #JOBS=1
 
@@ -36,35 +37,35 @@ version() {
 download() {
 	cd "$SRC_DIR"
 	if [ ! -e "gmp-${GMP_VERSION}" ]; then
-		$WGET https://gmplib.org/download/gmp/gmp-${GMP_VERSION}.tar.lz
+		$DOWNLOAD https://gmplib.org/download/gmp/gmp-${GMP_VERSION}.tar.lz
 		tar --lzip -xf gmp-${GMP_VERSION}.tar.lz
 	fi
 	if [ ! -e "mpfr-${MPFR_VERSION}" ]; then
-		$WGET https://www.mpfr.org/mpfr-current/mpfr-${MPFR_VERSION}.tar.xz
+		$DOWNLOAD https://www.mpfr.org/mpfr-current/mpfr-${MPFR_VERSION}.tar.xz
 		tar xJf mpfr-${MPFR_VERSION}.tar.xz
 	fi
 	if [ ! -e "mpc-${MPC_VERSION}" ]; then
-		$WGET https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VERSION}.tar.gz
+		$DOWNLOAD https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VERSION}.tar.gz
 		tar xzf mpc-${MPC_VERSION}.tar.gz
 	fi
 	if [ ! -e "isl-${ISL_VERSION}" ]; then
-		$WGET http://isl.gforge.inria.fr/isl-${ISL_VERSION}.tar.xz
+		$DOWNLOAD http://isl.gforge.inria.fr/isl-${ISL_VERSION}.tar.xz
 		tar xJf isl-${ISL_VERSION}.tar.xz
 	fi
 	if [ ! -e "zlib-${ZLIB_VERSION}" ]; then
-		$WGET https://zlib.net/zlib-${ZLIB_VERSION}.tar.xz
+		$DOWNLOAD https://zlib.net/zlib-${ZLIB_VERSION}.tar.xz
 		tar xJf zlib-${ZLIB_VERSION}.tar.xz
 	fi
 	if [ ! -e "binutils-${BINUTILS_VERSION}" ]; then
-		$WGET https://ftpmirror.gnu.org/binutils/binutils-${BINUTILS_VERSION}.tar.xz
+		$DOWNLOAD https://ftpmirror.gnu.org/binutils/binutils-${BINUTILS_VERSION}.tar.xz
 		tar xJf binutils-${BINUTILS_VERSION}.tar.xz
 	fi
 	if [ ! -e "gcc-${GCC_VERSION}" ]; then
-		$WGET https://mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz
+		$DOWNLOAD https://mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz
 		tar xJf gcc-${GCC_VERSION}.tar.xz
 	fi
 	if [ ! -e "mingw-w64-v${MINGW64_VERSION}" ]; then
-		$WGET https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v${MINGW64_VERSION}.tar.bz2
+		$DOWNLOAD https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v${MINGW64_VERSION}.tar.bz2
 		tar xjf mingw-w64-v${MINGW64_VERSION}.tar.bz2
 		if [ "$(version "$GCC_VERSION")" -ge "$(version "11.0.0")" ]; then
 			(
@@ -76,7 +77,7 @@ download() {
 		fi
 	fi
 	if [ ! -e "gdb-${GDB_VERSION}" ]; then
-		$WGET https://ftp.gnu.org/gnu/gdb/gdb-${GDB_VERSION}.tar.xz
+		$DOWNLOAD https://ftp.gnu.org/gnu/gdb/gdb-${GDB_VERSION}.tar.xz
 		tar xJf gdb-${GDB_VERSION}.tar.xz
 	fi
 }
