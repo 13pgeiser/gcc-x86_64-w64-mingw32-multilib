@@ -12,10 +12,11 @@ MPC_VERSION=1.2.1
 ISL_VERSION=0.24
 ZLIB_VERSION=1.2.11
 BINUTILS_VERSION=2.36.1
+#BINUTILS_VERSION=2.37 # NOK
 GCC_VERSION=8.5.0
 GCC_VERSION=9.4.0
 GCC_VERSION=10.3.0
-#GCC_VERSION=11.2.0 # Not yet ok.
+GCC_VERSION=11.2.0
 MINGW64_VERSION=9.0.0
 GDB_VERSION=10.2
 THREADS="posix"
@@ -25,14 +26,9 @@ ROOT_DIR="$(pwd)"
 PATCH_DIR="$(pwd)/patches"
 SRC_DIR="$(pwd)/sources"
 WRK_DIR="$(pwd)/workdir"
-#DOWNLOAD="wget -c --tries=40 --read-timeout=2 --backups=1"
 DOWNLOAD="curl  -O -J -L --retry 20"
 JOBS=$(($(nproc) * 2))
 #JOBS=1
-
-version() {
-	echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'
-}
 
 download() {
 	cd "$SRC_DIR"
@@ -67,14 +63,6 @@ download() {
 	if [ ! -e "mingw-w64-v${MINGW64_VERSION}" ]; then
 		$DOWNLOAD https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v${MINGW64_VERSION}.tar.bz2
 		tar xjf mingw-w64-v${MINGW64_VERSION}.tar.bz2
-		if [ "$(version "$GCC_VERSION")" -ge "$(version "11.0.0")" ]; then
-			(
-				cd "$SRC_DIR/mingw-w64-v${MINGW64_VERSION}"
-				# from Liu Hao
-				# [Mingw-w64-public] [PATCH] crt: Undefine `__rdtsc` for GCC 11
-				patch -p1 <"$PATCH_DIR"/mingw-w64-v8.0.0/0001-crt-Undefine-__rdtsc-for-GCC-11.patch
-			)
-		fi
 	fi
 	if [ ! -e "gdb-${GDB_VERSION}" ]; then
 		$DOWNLOAD https://ftp.gnu.org/gnu/gdb/gdb-${GDB_VERSION}.tar.xz
