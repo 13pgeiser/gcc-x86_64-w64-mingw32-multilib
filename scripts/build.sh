@@ -53,11 +53,11 @@ download() {
 		tar xJf zlib-${ZLIB_VERSION}.tar.xz
 	fi
 	if [ ! -e "binutils-${BINUTILS_VERSION}" ]; then
-		$DOWNLOAD https://ftpmirror.gnu.org/binutils/binutils-${BINUTILS_VERSION}.tar.xz
+		$DOWNLOAD http://ftpmirror.gnu.org/binutils/binutils-${BINUTILS_VERSION}.tar.xz
 		tar xJf binutils-${BINUTILS_VERSION}.tar.xz
 	fi
 	if [ ! -e "gcc-${GCC_VERSION}" ]; then
-		$DOWNLOAD https://mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz
+		$DOWNLOAD http://ftpmirror.gnu.org/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz
 		tar xJf gcc-${GCC_VERSION}.tar.xz
 	fi
 	if [ ! -e "mingw-w64-v${MINGW64_VERSION}" ]; then
@@ -65,7 +65,7 @@ download() {
 		tar xjf mingw-w64-v${MINGW64_VERSION}.tar.bz2
 	fi
 	if [ ! -e "gdb-${GDB_VERSION}" ]; then
-		$DOWNLOAD https://ftp.gnu.org/gnu/gdb/gdb-${GDB_VERSION}.tar.xz
+		$DOWNLOAD http://ftpmirror.gnu.org/gdb/gdb-${GDB_VERSION}.tar.xz
 		tar xJf gdb-${GDB_VERSION}.tar.xz
 	fi
 }
