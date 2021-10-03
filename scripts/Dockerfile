@@ -5,6 +5,7 @@ RUN set -ex \
 	&& apt-get dist-upgrade -y \
 	&& apt-get install -y \
 		autoconf \
+		autoconf-archive \
 		automake \
 		bison \
 		build-essential \

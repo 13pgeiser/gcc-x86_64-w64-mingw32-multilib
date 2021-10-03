@@ -45,7 +45,8 @@ download() {
 		tar xzf mpc-${MPC_VERSION}.tar.gz
 	fi
 	if [ ! -e "isl-${ISL_VERSION}" ]; then
-		$DOWNLOAD http://isl.gforge.inria.fr/isl-${ISL_VERSION}.tar.xz
+		#$DOWNLOAD http://isl.gforge.inria.fr/isl-${ISL_VERSION}.tar.xz
+		$DOWNLOAD https://mirrors.slackware.com/slackware/slackware64-current/source/l/isl/isl-${ISL_VERSION}.tar.xz
 		tar xJf isl-${ISL_VERSION}.tar.xz
 	fi
 	if [ ! -e "zlib-${ZLIB_VERSION}" ]; then
