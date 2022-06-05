@@ -10,15 +10,18 @@ MPFR_VERSION=4.1.0
 GMP_VERSION=6.2.1
 MPC_VERSION=1.2.1
 ISL_VERSION=0.24
-ZLIB_VERSION=1.2.11
-BINUTILS_VERSION=2.36.1
-#BINUTILS_VERSION=2.37 # NOK
+ZLIB_VERSION=1.2.12
+BINUTILS_VERSION=2.38
 GCC_VERSION=8.5.0
 GCC_VERSION=9.4.0
 GCC_VERSION=10.3.0
-GCC_VERSION=11.2.0
+GCC_VERSION=11.3.0
+GCC_VERSION=12.1.0
 MINGW64_VERSION=9.0.0
+#MINGW64_VERSION=10.0.0 # Not yet working.
 GDB_VERSION=10.2
+GDB_VERSION=12.1
+EXPAT_VERSION=2.4.8
 THREADS="posix"
 MULTILIB=true
 # Default folders
@@ -29,6 +32,7 @@ WRK_DIR="$(pwd)/workdir"
 DOWNLOAD="curl  -O -J -L --retry 20"
 JOBS=$(($(nproc) * 2))
 #JOBS=1
+
 
 download() {
 	cd "$SRC_DIR"
@@ -56,6 +60,13 @@ download() {
 	if [ ! -e "binutils-${BINUTILS_VERSION}" ]; then
 		$DOWNLOAD http://ftpmirror.gnu.org/binutils/binutils-${BINUTILS_VERSION}.tar.xz
 		tar xJf binutils-${BINUTILS_VERSION}.tar.xz
+		if [ "$BINUTILS_VERSION" = "2.38" ]; then
+			(
+			cd binutils-${BINUTILS_VERSION}
+			patch -p1 < "$PATCH_DIR/binutils-gdb-d65c0ddddd85645cab6f11fd711d21638a74489f.patch"
+			patch -p1 < "$PATCH_DIR/binutils-gdb-95086e1e54a726a0d7671d70640bc76e4fddf198.patch"
+			)
+		fi
 	fi
 	if [ ! -e "gcc-${GCC_VERSION}" ]; then
 		$DOWNLOAD http://ftpmirror.gnu.org/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz
@@ -68,6 +79,10 @@ download() {
 	if [ ! -e "gdb-${GDB_VERSION}" ]; then
 		$DOWNLOAD http://ftpmirror.gnu.org/gdb/gdb-${GDB_VERSION}.tar.xz
 		tar xJf gdb-${GDB_VERSION}.tar.xz
+	fi
+	if [ ! -e "expat-${EXPAT_VERSION}" ]; then
+		$DOWNLOAD "https://github.com/libexpat/libexpat/releases/download/R_$(echo $EXPAT_VERSION | sed 's/\./_/g')/expat-${EXPAT_VERSION}.tar.xz"
+		tar xJf expat-${EXPAT_VERSION}.tar.xz
 	fi
 }
 
@@ -116,6 +131,7 @@ build_prerequisites() {
 	LIBS_OPTIONS="--host=$1 --disable-shared --prefix=$SYSROOT"
 	# GMP
 	build_package gmp "$SRC_DIR/gmp-${GMP_VERSION}" "$LIBS_OPTIONS"
+	build_package gmp_prefix "$SRC_DIR/gmp-${GMP_VERSION}" "--host=$1 --disable-shared --prefix=$PREFIX"
 	# MPFR
 	build_package mpfr "$SRC_DIR/mpfr-${MPFR_VERSION}" "$LIBS_OPTIONS --with-gmp=$SYSROOT"
 	# MPC
@@ -199,6 +215,7 @@ build_toolchain() {
 	if [ "$1" = "x86_64-w64-mingw32" ]; then
 		export LOADLIBES="-lbcrypt"
 	fi
+	build_package expat "$SRC_DIR/expat-${EXPAT_VERSION}" "$BINUTILS_OPTIONS"
 	build_package gdb "$SRC_DIR/gdb-${GDB_VERSION}" "$BINUTILS_OPTIONS"
 	unset LOADLIBES
 }
@@ -241,6 +258,9 @@ test_x86_64_w64_mingw32() {
 	file main.32.exe
 	export WINEPATH="x86_64-w64-mingw32-${GCC_VERSION}/lib32"
 	wine64 main.32.exe
+
+	# Check gdb
+	wine64 "x86_64-w64-mingw32-${GCC_VERSION}"/bin/gdb.exe --version
 }
 
 create_archive() {

@@ -1,0 +1,113 @@
+From 95086e1e54a726a0d7671d70640bc76e4fddf198 Mon Sep 17 00:00:00 2001
+From: Nick Clifton <nickc@redhat.com>
+Date: Thu, 19 May 2022 15:05:12 +0100
+Subject: [PATCH] Fix potentially uninitialised variables in the Windows tools
+
+---
+ binutils/ChangeLog | 11 +++++++++++
+ binutils/dlltool.c |  2 +-
+ binutils/dllwrap.c |  2 +-
+ binutils/mclex.c   |  2 +-
+ binutils/resrc.c   |  2 +-
+ binutils/srconv.c  |  1 +
+ binutils/windmc.c  |  6 +++---
+ 7 files changed, 19 insertions(+), 7 deletions(-)
+
+diff --git a/binutils/dlltool.c b/binutils/dlltool.c
+index 89871510b45..e2af2084700 100644
+--- a/binutils/dlltool.c
++++ b/binutils/dlltool.c
+@@ -1268,7 +1268,7 @@ run (const char *what, char *args)
+   int pid, wait_status;
+   int i;
+   const char **argv;
+-  char *errmsg_fmt, *errmsg_arg;
++  char *errmsg_fmt = NULL, *errmsg_arg = NULL;
+   char *temp_base = choose_temp_base ();
+ 
+   inform (_("run: %s %s"), what, args);
+diff --git a/binutils/dllwrap.c b/binutils/dllwrap.c
+index 713322905c4..1be3cec72f1 100644
+--- a/binutils/dllwrap.c
++++ b/binutils/dllwrap.c
+@@ -350,7 +350,7 @@ run (const char *what, char *args)
+   int pid, wait_status, retcode;
+   int i;
+   const char **argv;
+-  char *errmsg_fmt, *errmsg_arg;
++  char *errmsg_fmt = NULL, *errmsg_arg = NULL;
+   char *temp_base = choose_temp_base ();
+   int in_quote;
+   char sep;
+diff --git a/binutils/mclex.c b/binutils/mclex.c
+index fd2888625b9..fe6f127d903 100644
+--- a/binutils/mclex.c
++++ b/binutils/mclex.c
+@@ -212,7 +212,7 @@ enum_severity (int e)
+ static void
+ mc_add_keyword_ascii (const char *sz, int rid, const char *grp, rc_uint_type nv, const char *sv)
+ {
+-  unichar *usz, *usv = NULL;
++  unichar *usz = NULL, *usv = NULL;
+   rc_uint_type usz_len;
+ 
+   unicode_from_codepage (&usz_len, &usz, sz, CP_ACP);
+diff --git a/binutils/resrc.c b/binutils/resrc.c
+index 249eb9a87ed..42afdc1d954 100644
+--- a/binutils/resrc.c
++++ b/binutils/resrc.c
+@@ -200,7 +200,7 @@ run_cmd (char *cmd, const char *redir)
+   int pid, wait_status, retcode;
+   int i;
+   const char **argv;
+-  char *errmsg_fmt, *errmsg_arg;
++  char *errmsg_fmt = NULL, *errmsg_arg = NULL;
+   char *temp_base = choose_temp_base ();
+   int in_quote;
+   char sep;
+diff --git a/binutils/srconv.c b/binutils/srconv.c
+index c77db99a9e7..6fc98bc49d5 100644
+--- a/binutils/srconv.c
++++ b/binutils/srconv.c
+@@ -316,6 +316,7 @@ wr_hd (struct coff_ofile *p)
+   struct IT_hd hd;
+ 
+   hd.spare1 = 0;
++  hd.spare2 = 0;
+   if (bfd_get_file_flags (abfd) & EXEC_P)
+     hd.mt = MTYPE_ABS_LM;
+   else
+diff --git a/binutils/windmc.c b/binutils/windmc.c
+index f9a41694be4..b47da91f1bb 100644
+--- a/binutils/windmc.c
++++ b/binutils/windmc.c
+@@ -338,7 +338,7 @@ mc_add_node_lang (mc_node *root, const mc_keyword *lang, rc_uint_type vid)
+ static char *
+ convert_unicode_to_ACP (const unichar *usz)
+ {
+-  char *s;
++  char *s = NULL;
+   rc_uint_type l;
+ 
+   if (! usz)
+@@ -607,7 +607,7 @@ mc_generate_bin_item (mc_node_lang *n, rc_uint_type *res_len)
+   else
+     {
+       rc_uint_type txt_len, l;
+-      char *cvt_txt;
++      char *cvt_txt = NULL;
+ 
+       codepage_from_unicode( &l, n->message, &cvt_txt, n->lang->lang_info.wincp);
+       if (! cvt_txt)
+@@ -1105,7 +1105,7 @@ main (int argc, char **argv)
+ 
+   /* Load the input file and do code page transformations to UTF16.  */
+   {
+-    unichar *u;
++    unichar *u = NULL;
+     rc_uint_type ul;
+     char *buff;
+     bfd_size_type flen;
+-- 
+2.31.1
+
