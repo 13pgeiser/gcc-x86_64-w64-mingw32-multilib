@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
-docker rm -f gcc_multilib || true
-docker build -t gcc_multilib ./scripts
-docker run -d --name gcc_multilib gcc_multilib sleep 43200
-docker cp patches gcc_multilib:/patches
-docker cp scripts gcc_multilib:/scripts
-docker cp test gcc_multilib:/test
-docker exec -i gcc_multilib bash /scripts/build.sh
+source docker_build_helper.sh
+
+prepare_container
+
+docker exec -i gcc_multilib bash /scripts/build.sh "$(gcc -dumpmachine)" "x86_64-w64-mingw32"
+docker exec -i gcc_multilib bash /scripts/build.sh "x86_64-w64-mingw32" "x86_64-w64-mingw32"
 docker cp gcc_multilib:/release ./
-docker rm -f gcc_multilib || true
-#docker system prune -f -a
+
+cleanup_container
+
 exit 0

@@ -231,25 +231,26 @@ build_toolchain() {
 		LIBC="newlib"
 		;;
 	"x86_64-linux-gnu")
-		if [ "$1" != "$2" ]; then
-			echo "Not supported $1 -> $2"
-			exit 1
-		fi
 		BASE_OPTIONS="$BASE_NO_SYSROOT_OPTIONS --enable-shared --enable-multiarch --disable-werror --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64 --enable-multilib --with-tune=generic"
-		BINUTILS_OPTIONS="$BASE_OPTIONS"
-		GCC_OPTIONS="$BASE_OPTIONS --enable-checking=release --enable-languages=c,c++ --enable-shared --enable-threads=posix --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib"
-		GLIBC_OPTIONS=""
-		unset LIBC
-		#BASE_OPTIONS="$BASE_NO_SYSROOT_OPTIONS --enable-shared --enable-multiarch --disable-werror --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64 --enable-multilib --with-tune=generic --with-sysroot=$SYSROOT"
-		#BINUTILS_OPTIONS="$BASE_OPTIONS"
-		#GCC_OPTIONS="$BASE_OPTIONS --enable-checking=release --enable-languages=c,c++ --enable-shared --enable-threads --with-glibc-version=$GLIBC_VERSION"
-		#~ GLIBC_OPTIONS="$BASE_OPTIONS --with-headers=$SYSROOT/usr/include/ --prefix=$PREFIX"
-		#~ mkdir -p "$SYSROOT/usr/include"
-		#~ cp -afLr /usr/include/asm "$SYSROOT/usr/include/"
-		#~ cp -afLr /usr/include/asm-generic "$SYSROOT/usr/include/"
-		#~ cp -afLr /usr/include/linux "$SYSROOT/usr/include/"
-		#~ cp -afLr /usr/include/selinux "$SYSROOT/usr/include/"
-		#~ LIBC="glibc"
+		if [ "$1" != "$2" ]; then
+			echo "Unsupported: $1 -> $2"
+			exit 1
+			BASE_OPTIONS="$BASE_OPTIONS --with-sysroot=$SYSROOT"
+			BINUTILS_OPTIONS="$BASE_OPTIONS"
+			GCC_OPTIONS="$BASE_OPTIONS --enable-checking=release --enable-languages=c,c++ --enable-shared --enable-threads=posix --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-glibc-version=$GLIBC_VERSION"
+			GLIBC_OPTIONS="$BASE_OPTIONS --with-headers=$SYSROOT/usr/include/ --prefix=$PREFIX"
+			mkdir -p "$SYSROOT/usr/include"
+			cp -afLr /usr/include/asm "$SYSROOT/usr/include/"
+			cp -afLr /usr/include/asm-generic "$SYSROOT/usr/include/"
+			cp -afLr /usr/include/linux "$SYSROOT/usr/include/"
+			cp -afLr /usr/include/selinux "$SYSROOT/usr/include/"
+			LIBC="glibc"
+		else
+			BINUTILS_OPTIONS="$BASE_OPTIONS"
+			GCC_OPTIONS="$BASE_OPTIONS --enable-checking=release --enable-languages=c,c++ --enable-shared --enable-threads=posix --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib"
+			GLIBC_OPTIONS=""
+			unset LIBC
+		fi
 		;;
 	*)
 		echo "Unsupported architecture $2"
@@ -310,13 +311,13 @@ build_toolchain() {
 	"glibc")
 		build_package glibcheaders "$SRC_DIR/glibc-${GLIBC_VERSION}" "$GLIBC_OPTIONS --prefix=$SYSROOT/usr" "skip" "install-bootstrap-headers=yes install-headers"
 		touch "$SYSROOT/usr/include/gnu/stubs.h"
-		build_package glibc64.sub "$SRC_DIR/glibc-${GLIBC_VERSION}" "$GLIBC_OPTIONS" "csu/subdir_lib" "skip"
+		build_package glibc64.sub "$SRC_DIR/glibc-${GLIBC_VERSION}" "$GLIBC_OPTIONS --host=x86_64-linux-gnu" "csu/subdir_lib" "skip"
 		(
 			cd "$BUILD_DIR/glibc64"
-			mkdir -p "$PREFIX/$2/lib/$2"
-			install csu/crt1.o csu/crti.o csu/crtn.o "$PREFIX/$2/lib/$2"
-			if [ ! -e "$PREFIX/$2/lib/$2/libc.so" ]; then
-				"$2-gcc" -nostdlib -nostartfiles -shared -x c /dev/null -o "$PREFIX/$2/lib/$2/libc.so"
+			mkdir -p "$PREFIX/lib64"
+			install csu/crt1.o csu/crti.o csu/crtn.o "$PREFIX/lib64"
+			if [ ! -e "$PREFIX/lib64/libc.so" ]; then
+				"$2-gcc" -nostdlib -nostartfiles -shared -x c /dev/null -o "$PREFIX/lib64/libc.so"
 			fi
 		)
 		export CC="$2-gcc -m32"
@@ -324,16 +325,21 @@ build_toolchain() {
 		build_package glibc32.sub "$SRC_DIR/glibc-${GLIBC_VERSION}" "$GLIBC_OPTIONS --host=i686-linux-gnu" "csu/subdir_lib" "skip"
 		(
 			cd "$BUILD_DIR/glibc32"
-			mkdir -p "$PREFIX/$2/lib/"
-			install csu/crt1.o csu/crti.o csu/crtn.o "$PREFIX/$2/lib/"
-			if [ ! -e "$PREFIX/$2/lib/libc.so" ]; then
-				$CC -nostdlib -nostartfiles -shared -x c /dev/null -o "$PREFIX/$2/lib/libc.so"
+			mkdir -p "$PREFIX/lib32"
+			install csu/crt1.o csu/crti.o csu/crtn.o "$PREFIX/lib32"
+			if [ ! -e "$PREFIX/lib32/libc.so" ]; then
+				$CC -nostdlib -nostartfiles -shared -x c /dev/null -o "$PREFIX/lib32/libc.so"
 			fi
 		)
 		unset CXX
 		unset CC
 		build_package gcc.libgcc "$SRC_DIR/gcc-${GCC_VERSION}" "skip" "all-target-libgcc" "install-target-libgcc"
 		build_package glibc64 "$SRC_DIR/glibc-${GLIBC_VERSION}" "skip"
+		export CC="$2-gcc -m32"
+		export CXX="$2-g++ -m32"
+		build_package glibc32 "$SRC_DIR/glibc-${GLIBC_VERSION}" "skip"
+		unset CXX
+		unset CC
 		;;
 	esac
 	# GCC final
@@ -459,8 +465,8 @@ build_full_toolchain() {
 	create_archive "$CFG_HOST" "$CFG_TARGET"
 }
 
-build_full_toolchain "$(gcc -dumpmachine)" "x86_64-w64-mingw32"
-build_full_toolchain "x86_64-w64-mingw32" "x86_64-w64-mingw32"
+#~ build_full_toolchain "$(gcc -dumpmachine)" "x86_64-w64-mingw32"
+#~ build_full_toolchain "x86_64-w64-mingw32" "x86_64-w64-mingw32"
 
 #~ build_full_toolchain "$(gcc -dumpmachine)" "moxie-elf"
 #~ build_full_toolchain "x86_64-w64-mingw32" "moxie-elf"
@@ -478,5 +484,7 @@ build_full_toolchain "x86_64-w64-mingw32" "x86_64-w64-mingw32"
 #~ build_full_toolchain "x86_64-w64-mingw32" "arm-none-eabi"
 
 #~ build_full_toolchain "$(gcc -dumpmachine)" "$(gcc -dumpmachine)"
+
+build_full_toolchain "$1" "$2"
 
 exit 0
