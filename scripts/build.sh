@@ -13,14 +13,12 @@ GCC_VERSION=8.5.0
 GCC_VERSION=9.5.0
 GCC_VERSION=10.4.0
 GCC_VERSION=11.3.0
-#GCC_VERSION=12.1.0
+GCC_VERSION=12.1.0
 MINGW64_VERSION=9.0.0
 #MINGW64_VERSION=10.0.0 # Not yet working.
-GDB_VERSION=10.2
 GDB_VERSION=12.1
 EXPAT_VERSION=2.4.8
 NEWLIB_VERSION=4.2.0.20211231
-#GLIBC_VERSION=2.31
 GLIBC_VERSION=2.35
 # Default folders
 ROOT_DIR="$(pwd)"
@@ -246,8 +244,8 @@ build_toolchain() {
 			cp -afLr /usr/include/selinux "$SYSROOT/usr/include/"
 			LIBC="glibc"
 		else
-			BINUTILS_OPTIONS="$BASE_OPTIONS"
-			GCC_OPTIONS="$BASE_OPTIONS --enable-checking=release --enable-languages=c,c++ --enable-shared --enable-threads=posix --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib"
+			BINUTILS_OPTIONS="$BASE_OPTIONS --disable-shared --enable-deterministic-archives --enable-gold --enable-lto"
+			GCC_OPTIONS="$BASE_OPTIONS --enable-checking=release --enable-languages=c,c++,fortran,lto,objc --enable-shared --enable-threads=posix --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib"
 			GLIBC_OPTIONS=""
 			unset LIBC
 		fi
