@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
-source docker_build_helper.sh
+if [ ! -e gcc-base ]; then
+	git submodule update --init --recursive
+fi
+source gcc-base/docker_build_helper.sh
 
 prepare_container buster
 

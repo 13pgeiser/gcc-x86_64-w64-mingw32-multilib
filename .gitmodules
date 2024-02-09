@@ -1,0 +1,3 @@
+[submodule "gcc-base"]
+	path = gcc-base
+	url = https://github.com/13pgeiser/gcc-base.git
