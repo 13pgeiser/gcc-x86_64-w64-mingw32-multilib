@@ -15,7 +15,7 @@ for TARGET in "x86_64-w64-mingw32" "arc-elf" "arm-none-eabi" "$BUILD"; do
 			continue
 		fi
 		echo "$HOST -> $TARGET"
-		docker exec -e WRK_DIR=/home/shannon/_tools -i gcc_multilib bash /scripts/build.sh "$HOST" "$TARGET"
+		docker exec -e WRK_DIR=/home/shannon/_tools -e GDB_WITH_PYTHON="--with-python" -i gcc_multilib bash /scripts/build.sh "$HOST" "$TARGET"
 	done
 done
 
