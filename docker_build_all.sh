@@ -5,11 +5,10 @@ if [ ! -e gcc-base ]; then
 fi
 source gcc-base/docker_build_helper.sh
 
-prepare_container buster
+prepare_container bookworm
 
 BUILD="$(gcc -dumpmachine)"
-#for TARGET in "m68k-elf"; do
-for TARGET in "riscv32-unknown-elf" "x86_64-w64-mingw32" "arc-elf" "arm-none-eabi"; do
+for TARGET in "m68k-elf" "riscv32-unknown-elf" "x86_64-w64-mingw32" "arc-elf" "arm-none-eabi"; do
 	for HOST in "$(gcc -dumpmachine)" "x86_64-w64-mingw32" ; do
 		if [ "$TARGET" == "$BUILD" ] && [ "$HOST" != "$TARGET" ]; then
 			echo "Skipping $HOST -> $TARGET"
